@@ -356,8 +356,8 @@ All panels use a `.glass` class with backdrop blur, semi-transparent backgrounds
 ## Related Documentation
 
 - **[Backend README](https://github.com/Fortexfreddie/Solus-Protocol)** — Full system architecture, API reference, WebSocket events, security model, and setup guide
-- **[DEEP_DIVE.md](https://github.com/Fortexfreddie/Solus-Protocol/blob/main/Backend/DEEP_DIVE.md)** — Comprehensive technical deep dive into the 7-layer air-gap engine
-- **[SKILLS.md](https://github.com/Fortexfreddie/Solus-Protocol/blob/main/Backend/SKILLS.md)** — Agent operator manual injected as LLM system prompt
+- **[DEEP_DIVE.md](https://github.com/Fortexfreddie/Solus-Protocol/blob/main/DEEP_DIVE.md)** — Comprehensive technical deep dive into the 7-layer air-gap engine
+- **[SKILLS.md](https://github.com/Fortexfreddie/Solus-Protocol/blob/main/SKILLS.md)** — Agent operator manual injected as LLM system prompt
 
 ---
 
