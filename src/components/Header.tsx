@@ -13,6 +13,10 @@ import { Github, Wallet, Hexagon, Menu, Copy, ExternalLink, Zap, Sun, Moon } fro
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { useSolusEvents } from "@/hooks/use-solus-events";
+import { useAgents } from "@/hooks/use-agents";
+import type { AgentId } from "@/types";
+import { toast } from "sonner";
 
 const NAV_LINKS = [
     { label: "Monitor", href: "#monitor" },
@@ -59,12 +63,21 @@ interface HeaderProps {
 }
 
 export function Header({ stats }: HeaderProps) {
+    const { isConnected } = useSolusEvents();
+    const { agents } = useAgents();
+    const [selectedAgentId, setSelectedAgentId] = useState<AgentId | null>(null);
+
     const cycles = stats?.totalCycles ?? 0;
     const swaps = stats?.totalSwaps ?? 0;
     const proofs = stats?.totalProofs ?? 0;
-    const wallet = stats?.walletAddress;
-    const walletShort = wallet
-        ? `${wallet.slice(0, 4)}...${wallet.slice(-4)}`
+
+    // Default to the first agent if none selected
+    const activeAgent =
+        agents.find((a) => a.id === selectedAgentId) ??
+        (agents.length > 0 ? agents[0] : null);
+
+    const activeWalletShort = activeAgent?.publicKey
+        ? `${activeAgent.publicKey.slice(0, 4)}...${activeAgent.publicKey.slice(-4)}`
         : null;
 
     return (
@@ -93,10 +106,16 @@ export function Header({ stats }: HeaderProps) {
                     <Divider gradient className="hidden sm:block" />
 
                     <div className="hidden sm:flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#00D68F]/8 border border-[#00D68F]/20">
-                            <PingDot color="sage" />
-                            <span className="text-[10px] font-mono font-medium text-[#00D68F] uppercase tracking-wider">
-                                Live
+                        <div className={cn(
+                            "flex items-center gap-1.5 px-2 py-1 rounded-lg border",
+                            isConnected ? "bg-[#00D68F]/8 border-[#00D68F]/20" : "bg-[#FFB547]/8 border-[#FFB547]/20"
+                        )}>
+                            {isConnected ? <PingDot color="sage" /> : <PingDot color="amber" className="animate-none" />}
+                            <span className={cn(
+                                "text-[10px] font-mono font-medium uppercase tracking-wider",
+                                isConnected ? "text-[#00D68F]" : "text-[#FFB547]"
+                            )}>
+                                {isConnected ? "Live" : "Connecting"}
                             </span>
                         </div>
                         <Badge variant="amber" glow>Devnet</Badge>
@@ -149,8 +168,8 @@ export function Header({ stats }: HeaderProps) {
                         <Github className="w-4 h-4" />
                     </a>
 
-                    {/* Wallet dropdown — only show if we have a wallet address */}
-                    {walletShort && (
+                    {/* Agent Vault Dropdown */}
+                    {activeWalletShort && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button className={cn(
@@ -160,29 +179,48 @@ export function Header({ stats }: HeaderProps) {
                                 )}>
                                     <Wallet className="w-3.5 h-3.5 text-ink-dim group-hover:text-[#7C5CFC] transition-colors" />
                                     <span className="text-xs font-mono text-ink-muted hidden sm:block">
-                                        {walletShort}
+                                        {activeAgent?.name}: {activeWalletShort}
                                     </span>
                                 </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Wallet</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => wallet && navigator.clipboard.writeText(wallet)}>
-                                    <Copy className="w-3.5 h-3.5" />
-                                    Copy Address
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuLabel>Agent Vaults</DropdownMenuLabel>
+                                {agents.map((agent) => (
+                                    <DropdownMenuItem
+                                        key={agent.id}
+                                        onClick={() => setSelectedAgentId(agent.id)}
+                                        className={cn(agent.id === activeAgent?.id && "bg-white/[0.04] my-0.5")}
+                                    >
+                                        <div className="flex flex-col gap-1 w-full">
+                                            <span className="font-medium text-xs text-ink">{agent.name}</span>
+                                            <span className="text-[10px] font-mono text-ink-muted">
+                                                {agent.publicKey.slice(0, 4)}...{agent.publicKey.slice(-4)}
+                                            </span>
+                                        </div>
+                                    </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {
+                                    if (activeAgent) {
+                                        navigator.clipboard.writeText(activeAgent.publicKey);
+                                        toast.success("Address Copied", {
+                                            description: activeAgent.publicKey
+                                        });
+                                    }
+                                }}>
+                                    <Copy className="w-3.5 h-3.5 mr-2" />
+                                    Copy Active Address
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <a
-                                        href={`https://explorer.solana.com/address/${wallet}?cluster=devnet`}
+                                        href={`https://explorer.solana.com/address/${activeAgent?.publicKey}?cluster=devnet`}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        className="flex items-center w-full"
                                     >
-                                        <ExternalLink className="w-3.5 h-3.5" />
+                                        <ExternalLink className="w-3.5 h-3.5 mr-2" />
                                         View on Explorer
                                     </a>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem destructive>
-                                    Disconnect
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>

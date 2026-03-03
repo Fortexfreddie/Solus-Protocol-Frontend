@@ -229,3 +229,15 @@ export function postForceRun(id: string) {
         { method: "POST", retries: 0 },
     );
 }
+
+/** GET /api/agents/:id/history — recent transactions */
+export function getAgentHistory(id: string, limit = 20) {
+    return apiFetch<{ agentId: string; transactions: import("@/types").TxRecord[]; count: number }>(
+        `/agents/${id}/history?limit=${limit}`
+    );
+}
+
+/** GET /api/proofs/:hash — verify an anchored proof hash */
+export function verifyProof(hash: string) {
+    return apiFetch<import("@/types").ProofVerificationResult>(`/proofs/${hash}`);
+}

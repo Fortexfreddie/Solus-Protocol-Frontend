@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { useAgentHistory } from "@/hooks/use-agent-history";
+import { toast } from "sonner";
+
 import { Agent, AgentId, RiskProfile, PipelineStep, PipelineStepStatus } from "@/types";
 import { cn, formatEquity } from "@/lib/utils";
 import { Switch } from "@/components/ui/Switch";
@@ -20,6 +24,8 @@ import {
     CheckCircle2,
     XCircle,
     Circle,
+    Copy,
+    Check,
     Loader2,
     Play,
     RefreshCw,
@@ -29,6 +35,9 @@ import {
     Zap,
     TrendingUp,
     TrendingDown,
+    History,
+    Activity,
+    ExternalLink,
 } from "lucide-react";
 
 // ─── Agent color tokens ───────────────────────────────────────────────────────
@@ -189,7 +198,7 @@ function AgentDetailModal({ agent }: { agent: Agent }) {
                 {/* Wallet info */}
                 <div className="flex items-center justify-between bg-white/[0.02] rounded-xl px-3 py-2.5 border border-white/[0.04]">
                     <span className="text-[10px] text-slate-500">Public Key</span>
-                    <span className="text-[11px] font-mono text-slate-300">{agent.publicKey}</span>
+                    <span className="text-[11px] font-mono text-slate-300">{agent.publicKey.slice(0, 4)}...{agent.publicKey.slice(-4)}</span>
                 </div>
             </div>
         </>
@@ -209,6 +218,10 @@ export function AgentCard({ agent, onToggle, onForceRun }: AgentCardProps) {
     const hasError = agent.pipeline.some((s) => s.status === "error");
     const { riskProfile } = agent.profile;
     const isPnLPos = agent.netPnLUsd >= 0;
+
+    const [copied, setCopied] = useState(false);
+    const [activeTab, setActiveTab] = useState<"pipeline" | "history">("pipeline");
+    const { transactions, isLoading: historyLoading } = useAgentHistory(agent.id, 10);
 
     const doneCount = agent.pipeline.filter((s) => s.status === "done").length;
     const progressPct = Math.round((doneCount / agent.pipeline.length) * 100);
@@ -245,13 +258,30 @@ export function AgentCard({ agent, onToggle, onForceRun }: AgentCardProps) {
                             {agent.name.split(" ")[1]?.[0] ?? "A"}
                         </div>
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                         <h3 className="font-semibold text-sm text-ink leading-tight truncate">
                             {agent.name}
                         </h3>
-                        <p className="text-[10px] font-mono text-slate-600 mt-0.5 truncate">
-                            {agent.publicKey}
-                        </p>
+                        <div
+                            className="flex items-center gap-1.5 mt-0.5 group cursor-pointer"
+                            onClick={() => {
+                                navigator.clipboard.writeText(agent.publicKey);
+                                setCopied(true);
+                                toast.success("Address Copied", {
+                                    description: agent.publicKey
+                                });
+                                setTimeout(() => setCopied(false), 2000);
+                            }}
+                        >
+                            <p className="text-[10px] font-mono text-slate-600 truncate transition-colors group-hover:text-slate-400">
+                                {agent.publicKey.slice(0, 4)}...{agent.publicKey.slice(-4)}
+                            </p>
+                            {copied ? (
+                                <Check className="w-3 h-3 text-[#00D68F] shrink-0" />
+                            ) : (
+                                <Copy className="w-3 h-3 text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -330,23 +360,92 @@ export function AgentCard({ agent, onToggle, onForceRun }: AgentCardProps) {
                 </div>
             </div>
 
-            {/* Pipeline */}
-            <div className="px-4 pb-3 space-y-2 relative">
-                <div className="absolute left-[23px] top-0 bottom-0 w-px bg-track" />
-                {agent.pipeline.map((step) => (
-                    <div
-                        key={step.id}
-                        className={cn(
-                            "flex items-center gap-3 relative",
-                            step.status === "pending" && "opacity-35"
-                        )}
-                    >
-                        <div className="relative z-10 bg-background rounded-full">
-                            <StepIcon status={step.status} />
-                        </div>
-                        <StepLabel step={step} />
+            {/* Tab Toggles */}
+            <div className="px-4 mb-2 flex gap-4 border-b border-edge">
+                <button
+                    onClick={() => setActiveTab("pipeline")}
+                    className={cn(
+                        "pb-2 text-xs font-bold transition-colors flex items-center gap-1.5 border-b-2",
+                        activeTab === "pipeline"
+                            ? "text-ink border-[#7C5CFC]"
+                            : "text-ink-muted border-transparent hover:text-ink"
+                    )}
+                >
+                    <Activity className="w-3.5 h-3.5" /> Pipeline
+                </button>
+                <button
+                    onClick={() => setActiveTab("history")}
+                    className={cn(
+                        "pb-2 text-xs font-bold transition-colors flex items-center gap-1.5 border-b-2",
+                        activeTab === "history"
+                            ? "text-ink border-[#7C5CFC]"
+                            : "text-ink-muted border-transparent hover:text-ink"
+                    )}
+                >
+                    <History className="w-3.5 h-3.5" /> History
+                </button>
+            </div>
+
+            {/* Pipeline or History Content */}
+            <div className="px-4 pb-3 flex-1 overflow-y-auto max-h-[180px] min-h-[180px]">
+                {activeTab === "pipeline" ? (
+                    <div className="space-y-2 relative">
+                        <div className="absolute left-[7px] top-0 bottom-0 w-px bg-track" />
+                        {agent.pipeline.map((step) => (
+                            <div
+                                key={step.id}
+                                className={cn(
+                                    "flex items-center gap-3 relative",
+                                    step.status === "pending" && "opacity-35"
+                                )}
+                            >
+                                <div className="relative z-10 bg-background rounded-full">
+                                    <StepIcon status={step.status} />
+                                </div>
+                                <StepLabel step={step} />
+                            </div>
+                        ))}
                     </div>
-                ))}
+                ) : (
+                    <div className="space-y-2">
+                        {historyLoading ? (
+                            <div className="py-6 flex justify-center">
+                                <Loader2 className="w-4 h-4 text-ink-dim animate-spin" />
+                            </div>
+                        ) : transactions.length === 0 ? (
+                            <div className="py-6 text-center text-ink-muted text-[11px] font-mono">
+                                No recent swaps
+                            </div>
+                        ) : (
+                            transactions.map((tx) => (
+                                <a
+                                    key={tx.signature}
+                                    href={`https://explorer.solana.com/tx/${tx.signature}?cluster=devnet`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block p-2 rounded-lg border border-edge bg-panel hover:bg-panel-hover transition-colors group"
+                                >
+                                    <div className="flex justify-between items-center bg-transparent m-0 p-0 border-none outline-none">
+                                        <div className="flex items-center gap-2 bg-transparent m-0 p-0 border-none outline-none">
+                                            <div className="w-5 h-5 rounded-full bg-white/[0.04] flex items-center justify-center bg-transparent m-0 p-0 border-none outline-none">
+                                                <History className="w-3 h-3 text-ink-dim" />
+                                            </div>
+                                            <div className="flex flex-col bg-transparent m-0 p-0 border-none outline-none">
+                                                <span className="text-[10px] text-ink font-semibold flex items-center gap-1 bg-transparent m-0 p-0 border-none outline-none">
+                                                    Swapped {tx.amountIn.toFixed(2)} {tx.fromToken} → {tx.amountOut.toFixed(2)} {tx.toToken}
+                                                </span>
+                                                <span className="text-[9px] font-mono text-ink-dim bg-transparent m-0 p-0 border-none outline-none">
+                                                    Cycle #{tx.cycle}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <ExternalLink className="w-3 h-3 text-ink-dim opacity-0 group-hover:opacity-100 transition-opacity bg-transparent m-0 p-0 border-none outline-none" />
+                                    </div>
+                                </a>
+                            ))
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Footer */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useSWRConfig } from "swr";
 import type { AgentId } from "@/types";
@@ -24,6 +24,7 @@ type EventHandler = (event: SolusEvent) => void;
 export function useSolusEvents(onEvent?: EventHandler) {
     const socketRef = useRef<Socket | null>(null);
     const { mutate } = useSWRConfig();
+    const [isConnected, setIsConnected] = useState(false);
     const handlerRef = useRef<EventHandler | undefined>(onEvent);
     handlerRef.current = onEvent;
 
@@ -66,10 +67,12 @@ export function useSolusEvents(onEvent?: EventHandler) {
 
         socket.on("connect", () => {
             console.log("[Solus WS] Connected");
+            setIsConnected(true);
         });
 
         socket.on("disconnect", (reason) => {
             console.log("[Solus WS] Disconnected:", reason);
+            setIsConnected(false);
         });
 
         return () => {
@@ -82,5 +85,5 @@ export function useSolusEvents(onEvent?: EventHandler) {
         socketRef.current?.emit(event, data);
     }, []);
 
-    return { emit };
+    return { emit, isConnected };
 }

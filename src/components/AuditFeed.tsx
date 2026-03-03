@@ -99,40 +99,48 @@ export function AuditFeed({ entries }: { entries: AuditEntry[] }) {
 
     const renderEntries = (list: AuditEntry[]) => (
         <div className="space-y-0.5">
-            {list.map((entry) => (
-                <Dialog key={entry.id}>
-                    <DialogTrigger asChild>
-                        <div className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-white/[0.03] transition-colors group cursor-pointer">
-                            <span className="font-mono text-[10px] text-slate-600 w-14 shrink-0 tabular-nums pt-0.5">
-                                {entry.timestamp}
-                            </span>
-                            <span className={cn("w-1.5 h-1.5 rounded-full mt-1.5 shrink-0", SEV_DOT[entry.severity])} />
-                            <span
-                                className={cn(
-                                    "font-mono text-[10px] font-bold w-10 shrink-0",
-                                    AGENT_COLORS[entry.agentId]
+            {list.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Clock className="w-5 h-5 text-slate-600 mb-2" />
+                    <p className="text-[11px] font-mono text-slate-500">Waiting for events...</p>
+                    <p className="text-[9px] font-mono text-slate-700 mt-1">Events appear as agents cycle</p>
+                </div>
+            ) : (
+                list.map((entry) => (
+                    <Dialog key={entry.id}>
+                        <DialogTrigger asChild>
+                            <div className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-white/[0.03] transition-colors group cursor-pointer">
+                                <span className="font-mono text-[10px] text-slate-600 w-14 shrink-0 tabular-nums pt-0.5">
+                                    {entry.timestamp}
+                                </span>
+                                <span className={cn("w-1.5 h-1.5 rounded-full mt-1.5 shrink-0", SEV_DOT[entry.severity])} />
+                                <span
+                                    className={cn(
+                                        "font-mono text-[10px] font-bold w-10 shrink-0",
+                                        AGENT_COLORS[entry.agentId]
+                                    )}
+                                >
+                                    {entry.agentLabel}
+                                </span>
+                                <span
+                                    className={cn(
+                                        "font-mono text-[10px] leading-relaxed flex-1 min-w-0 break-words",
+                                        SEV_COLORS[entry.severity]
+                                    )}
+                                >
+                                    {entry.message}
+                                </span>
+                                {entry.txLink && (
+                                    <ExternalLink className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors shrink-0 mt-0.5" />
                                 )}
-                            >
-                                {entry.agentLabel}
-                            </span>
-                            <span
-                                className={cn(
-                                    "font-mono text-[10px] leading-relaxed flex-1 min-w-0 break-words",
-                                    SEV_COLORS[entry.severity]
-                                )}
-                            >
-                                {entry.message}
-                            </span>
-                            {entry.txLink && (
-                                <ExternalLink className="w-3 h-3 text-slate-700 group-hover:text-slate-400 transition-colors shrink-0 mt-0.5" />
-                            )}
-                        </div>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <AuditDetailModal entry={entry} />
-                    </DialogContent>
-                </Dialog>
-            ))}
+                            </div>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <AuditDetailModal entry={entry} />
+                        </DialogContent>
+                    </Dialog>
+                ))
+            )}
         </div>
     );
 

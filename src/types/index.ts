@@ -202,3 +202,22 @@ export interface SystemStats {
     koraConnected: boolean;
     pricesFresh: boolean;
 }
+
+// ─── Transaction History & Proof Verification ───────────────────────────────────
+
+export interface TxRecord {
+    signature: string;
+    agentId: AgentId;
+    fromToken: string;
+    toToken: string;
+    amountIn: number;
+    amountOut: number;
+    timestamp: number;
+    cycle: number;
+    proofHash?: string;
+}
+
+export interface ProofVerificationResult {
+    entry: unknown;
+    verified: boolean;
+}

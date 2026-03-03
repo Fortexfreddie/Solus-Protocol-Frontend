@@ -61,6 +61,7 @@ The frontend uses a dual data strategy: **SWR polling** for consistent state and
 │  │  useAgents()  │  │  usePrices()  │  │ useSolusEvents│  │
 │  │  useLead..()  │  │  useProofs()  │  │   (WebSocket) │  │
 │  │  useAudit()   │  │  useHealth()  │  │               │  │
+│  │ useAgentHis() │  │               │  │               │  │
 │  └──────┬────────┘  └──────┬────────┘  └───────┬───────┘  │
 │         │                  │                   │          │
 │         └──────────┐       │      ┌────────────┘          │
@@ -90,14 +91,13 @@ The frontend uses a dual data strategy: **SWR polling** for consistent state and
 
 Every UI component is fed by a dedicated SWR hook that polls the backend at optimized intervals:
 
-| Hook | Endpoint | Interval | Components Fed |
-|------|----------|----------|----------------|
 | `useAgents()` | `GET /api/agents` + `/api/agents/:id/balance` | 10s | AgentCard, Header stats |
 | `usePrices()` | `GET /api/prices` | 15s | LivePrices |
 | `useLeaderboard()` | `GET /api/leaderboard` | 15s | Leaderboard, Header stats |
 | `useProofs()` | `GET /api/proofs` | 20s | ProofOfReasoning, Header stats |
 | `useAuditLog()` | `GET /api/logs?page=1&limit=50` | 10s | AuditFeed |
 | `useSystemHealth()` | `GET /health` | 20s | SystemStatus |
+| `useAgentHistory()` | `GET /api/agents/:id/history` | 15s | AgentCard (History Tab) |
 
 ### Error Handling & Retry
 
@@ -199,13 +199,13 @@ Frontend/
 │   │   └── globals.css             # Design tokens, light/dark themes, animations
 │   │
 │   ├── components/
-│   │   ├── Header.tsx              # Nav bar, session stats, wallet dropdown, theme toggle
-│   │   ├── AgentCard.tsx           # Agent status, pipeline, toggle, force run, detail modal
-│   │   ├── StrategistPanel.tsx     # Terminal output + policy engine checks (Radix Tabs)
+│   │   ├── Header.tsx              # Nav bar, session stats, Agent Vault dropdown, theme toggle
+│   │   ├── AgentCard.tsx           # Agent status, pipeline/history toggle, and controls  
+│   │   ├── StrategistPanel.tsx     # Real-time LLM reasoning output + policy engine checks
 │   │   ├── Leaderboard.tsx         # PnL ranking with balance tooltips
 │   │   ├── LivePrices.tsx          # Token prices with 24h change
 │   │   ├── AuditFeed.tsx           # Filterable audit log (Radix Tabs per agent)
-│   │   ├── ProofOfReasoning.tsx    # On-chain proof records with copy + explorer links
+│   │   ├── ProofOfReasoning.tsx    # On-chain proof records with Verify Hash button
 │   │   ├── SystemStatus.tsx        # RPC, Kora, Oracle, WebSocket health
 │   │   ├── ThemeProvider.tsx       # next-themes wrapper
 │   │   └── ui/                     # Radix UI wrappers
@@ -224,6 +224,7 @@ Frontend/
 │   │   ├── use-proofs.ts           # SWR: proof-of-reasoning records
 │   │   ├── use-audit-log.ts        # SWR: audit entries with severity inference
 │   │   ├── use-system-health.ts    # SWR: /health endpoint → SystemStats
+│   │   ├── use-agent-history.ts    # SWR: transaction history per agent
 │   │   └── use-solus-events.ts     # Socket.io WebSocket + SWR cache invalidation
 │   │
 │   ├── lib/
